@@ -1,0 +1,15 @@
+name: skn-1st
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - pip
+  - pip:
+      - streamlit
+      - mysql-connector-python
+      - python-dotenv
+      - requests
+      - matplotlib
+prefix: C:\Users\keror\miniconda3\envs\skn-1st

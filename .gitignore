@@ -1,2 +1,53 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Environment
 .env
-.vscode
+
+# Conda
+.envs/
+.conda/
+*.conda
+*.env
+
+# Virtualenv
+venv/
+.venv/
+ENV/
+
+# VSCode
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Streamlit cache
+.streamlit/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# MySQL / local DB dumps
+*.sql
+
+# Python coverage / test
+.coverage
+htmlcov/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Mac/Linux hidden
+.*.swp
