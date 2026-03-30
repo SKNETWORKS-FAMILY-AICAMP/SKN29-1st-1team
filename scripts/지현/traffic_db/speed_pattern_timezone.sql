@@ -1,0 +1,1 @@
+SELECT * FROM speed_pattern_timezone LIMIT 10000;

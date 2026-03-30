@@ -1,0 +1,1 @@
+SELECT * FROM speed_pattern_monthly LIMIT 100000;
