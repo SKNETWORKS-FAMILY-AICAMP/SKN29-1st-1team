@@ -14,6 +14,10 @@
 ## 2. Team Route 👥
 ### 누가 무엇을 했는지 구조화
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/a555f545-6001-4a06-9044-4576a5f6f03c" width="100%" alt="Team Photo or Architecture Diagram">
+</p>
+
 | 이름 | 역할 | 담당 분석 및 업무 |
 | :---: | :---: | :--- |
 | **김진욱** | **Project Lead** | 총괄 DB 설계 및 인천공항 방향 교통 흐름 분석 |
