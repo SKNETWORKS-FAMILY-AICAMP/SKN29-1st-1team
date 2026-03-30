@@ -36,7 +36,7 @@
 ## 📐 Database Architecture (ERD)
 
 <p align="center">
-  <img src=""https://github.com/qkfmadl0-create/skn29_lecture/issues/1#issue-4170015603"" width="80%">
+  <img src=""<img width="958" height="1127" alt="Image" src="https://github.com/user-attachments/assets/3443ccbb-e8af-4dd8-802b-489180a0384a" />"" width="80%">
 </p>
 
 ### **📌 Schema Highlights**
