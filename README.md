@@ -25,6 +25,14 @@
 
 
 ## 👥 팀원 소개 및 역할
+
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/3443ccbb-e8af-4dd8-802b-489180a0384a" width="80%" alt="Database ERD">
+</p>
+
+
+
 | 이름 | 역할 | 상세 업무 |
 | :---: | :---: | :--- |
 | **김은진** | **Data Engineering** | [cite_start]프로젝트 총괄 DB 설계, 기상 패턴(`weather_pattern_asos`) 및 통계 데이터 모델링 [cite: 5] |
