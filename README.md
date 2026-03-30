@@ -36,7 +36,7 @@
 ## 📐 Database Architecture (ERD)
 
 <p align="center">
-  <img src=""<img width="958" height="1127" alt="Image" src="https://github.com/user-attachments/assets/3443ccbb-e8af-4dd8-802b-489180a0384a" />"" width="80%">
+  <img src="https://github.com/user-attachments/assets/3443ccbb-e8af-4dd8-802b-489180a0384a" width="80%" alt="Database ERD">
 </p>
 
 ### **📌 Schema Highlights**
