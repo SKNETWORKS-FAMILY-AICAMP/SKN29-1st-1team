@@ -26,9 +26,9 @@ def load_roads():
     """도로명 목록"""
     try:
         conn = get_conn()
-        df = pd.read_sql("SELECT DISTINCT roadName FROM speed_pattern_timezone ORDER BY roadName", conn)
+        df = pd.read_sql("SELECT DISTINCT road_name FROM pp_road ORDER BY road_name", conn)
         conn.close()
-        return df["roadName"].tolist()
+        return df["road_name"].tolist()
     except Exception as e:
         st.error(f"DB 연결 실패: {e}")
         return []
@@ -39,25 +39,25 @@ def load_roads():
 @st.cache_data(ttl=300)
 def load_base_speed(road, hour, day_str):
     """선택한 요일의 평상시 평균 속도"""
-    hour_col = f"hour{str(hour).zfill(2)}"
     try:
         conn = get_conn()
-        query = f"SELECT statDate, {hour_col} AS speed FROM speed_pattern_timezone WHERE roadName = %s AND {hour_col} > 0"
-        df = pd.read_sql(query, conn, params=(road,))
+        target_dow = {"mon":0, "tue":1, "wed":2, "thu":3, "fri":4, "sat":5, "sun":6}[day_str]
+        query = """
+            SELECT AVG(ps.speed) AS avg_speed
+            FROM pp_speed ps
+            JOIN pp_road pr
+              ON pr.road_id = ps.road_id
+            WHERE pr.road_name = %s
+              AND HOUR(ps.datetime) = %s
+              AND WEEKDAY(ps.datetime) = %s
+              AND ps.speed > 0
+        """
+        df = pd.read_sql(query, conn, params=(road, hour, target_dow))
         conn.close()
         
-        if df.empty: return None
-        
-        # 날짜 포맷 강제 변환 (DB 포맷 에러 방지)
-        df['statDate'] = pd.to_datetime(df['statDate'].astype(str).str.replace('-', ''), format='%Y%m%d', errors='coerce')
-        df = df.dropna(subset=['statDate'])
-        
-        # 선택한 요일 필터링 (Pandas 요일: 0=월 ~ 6=일)
-        target_day = {"mon":0, "tue":1, "wed":2, "thu":3, "fri":4, "sat":5, "sun":6}[day_str]
-        df = df[df['statDate'].dt.dayofweek == target_day]
-        
-        if df.empty: return None
-        return round(df['speed'].mean(), 1)
+        if df.empty or df["avg_speed"].isna().all():
+            return None
+        return round(float(df["avg_speed"].iloc[0]), 1) if df["avg_speed"].iloc[0] is not None else None
     except:
         return None
 
@@ -74,42 +74,54 @@ def load_weather_speed(road, hour, day_str, weather_type, intensity):
     
     try:
         conn = get_conn()
+        target_dow = {"mon":0, "tue":1, "wed":2, "thu":3, "fri":4, "sat":5, "sun":6}[day_str]
         if weather_type == "clear":
             query = f"""
-                SELECT t.statDate, t.{hour_col} AS speed
-                FROM speed_pattern_timezone t
-                LEFT JOIN weather_pattern_asos w_rn ON t.statDate = w_rn.statDate AND w_rn.weatherItem = 'rn'
-                LEFT JOIN weather_pattern_asos w_sn ON t.statDate = w_sn.statDate AND w_sn.weatherItem = 'dsnw'
-                LEFT JOIN weather_pattern_asos w_ws ON t.statDate = w_ws.statDate AND w_ws.weatherItem = 'ws'
-                WHERE t.roadName = %s AND t.{hour_col} > 0
+                SELECT AVG(ps.speed) AS predicted_speed
+                FROM pp_speed ps
+                JOIN pp_road pr
+                  ON pr.road_id = ps.road_id
+                LEFT JOIN weather_pattern_asos w_rn
+                  ON w_rn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_rn.weatherItem = 'rn'
+                LEFT JOIN weather_pattern_asos w_sn
+                  ON w_sn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_sn.weatherItem = 'dsnw'
+                LEFT JOIN weather_pattern_asos w_ws
+                  ON w_ws.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_ws.weatherItem = 'ws'
+                WHERE pr.road_name = %s
+                  AND HOUR(ps.datetime) = %s
+                  AND WEEKDAY(ps.datetime) = %s
+                  AND ps.speed > 0
                   AND (w_rn.{hour_col} IS NULL OR w_rn.{hour_col} = 0)
                   AND (w_sn.{hour_col} IS NULL OR w_sn.{hour_col} = 0)
                   AND (w_ws.{hour_col} IS NULL OR w_ws.{hour_col} < 5)
             """
-            df = pd.read_sql(query, conn, params=(road,))
+            df = pd.read_sql(query, conn, params=(road, hour, target_dow))
         else:
             item = weather_col_map[weather_type]
             vmin, vmax = intensity_ranges[weather_type][intensity]
             query = f"""
-                SELECT t.statDate, t.{hour_col} AS speed
-                FROM speed_pattern_timezone t
-                JOIN weather_pattern_asos w ON t.statDate = w.statDate AND w.weatherItem = %s
-                WHERE t.roadName = %s AND t.{hour_col} > 0
+                SELECT AVG(ps.speed) AS predicted_speed
+                FROM pp_speed ps
+                JOIN pp_road pr
+                  ON pr.road_id = ps.road_id
+                JOIN weather_pattern_asos w
+                  ON w.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w.weatherItem = %s
+                WHERE pr.road_name = %s
+                  AND HOUR(ps.datetime) = %s
+                  AND WEEKDAY(ps.datetime) = %s
+                  AND ps.speed > 0
                   AND w.{hour_col} >= %s AND w.{hour_col} < %s
             """
-            df = pd.read_sql(query, conn, params=(item, road, vmin, vmax))
+            df = pd.read_sql(query, conn, params=(item, road, hour, target_dow, vmin, vmax))
         conn.close()
 
-        if df.empty: return None
-        
-        df['statDate'] = pd.to_datetime(df['statDate'].astype(str).str.replace('-', ''), format='%Y%m%d', errors='coerce')
-        df = df.dropna(subset=['statDate'])
-        
-        target_day = {"mon":0, "tue":1, "wed":2, "thu":3, "fri":4, "sat":5, "sun":6}[day_str]
-        df = df[df['statDate'].dt.dayofweek == target_day]
-        
-        if df.empty: return None
-        return round(df['speed'].mean(), 1)
+        if df.empty or df["predicted_speed"].isna().all():
+            return None
+        return round(float(df["predicted_speed"].iloc[0]), 1) if df["predicted_speed"].iloc[0] is not None else None
     except:
         return None
 
@@ -127,56 +139,74 @@ def load_weekly_comparison(road, hour, weather_type, intensity):
     
     try:
         conn = get_conn()
-        
-        # 평상시 전체 데이터
-        query_base = f"SELECT statDate, {hour_col} AS speed FROM speed_pattern_timezone WHERE roadName = %s AND {hour_col} > 0"
-        df_base = pd.read_sql(query_base, conn, params=(road,))
-        
-        # 기상 조건 전체 데이터
+
+        # 평상시 요일별 통계 (pp_speed는 실제 datetime 기반)
+        query_base = """
+            SELECT WEEKDAY(ps.datetime) AS dow, AVG(ps.speed) AS speed
+            FROM pp_speed ps
+            JOIN pp_road pr
+              ON pr.road_id = ps.road_id
+            WHERE pr.road_name = %s
+              AND HOUR(ps.datetime) = %s
+              AND ps.speed > 0
+            GROUP BY dow
+        """
+        df_base = pd.read_sql(query_base, conn, params=(road, hour))
+
+        # 기상 조건 요일별 통계 (weather_pattern_asos는 statDate=YYYYMM, 월 평균 강도)
         if weather_type == "clear":
             query_weather = f"""
-                SELECT t.statDate, t.{hour_col} AS speed
-                FROM speed_pattern_timezone t
-                LEFT JOIN weather_pattern_asos w_rn ON t.statDate = w_rn.statDate AND w_rn.weatherItem = 'rn'
-                LEFT JOIN weather_pattern_asos w_sn ON t.statDate = w_sn.statDate AND w_sn.weatherItem = 'dsnw'
-                LEFT JOIN weather_pattern_asos w_ws ON t.statDate = w_ws.statDate AND w_ws.weatherItem = 'ws'
-                WHERE t.roadName = %s AND t.{hour_col} > 0
+                SELECT WEEKDAY(ps.datetime) AS dow, AVG(ps.speed) AS speed
+                FROM pp_speed ps
+                JOIN pp_road pr
+                  ON pr.road_id = ps.road_id
+                LEFT JOIN weather_pattern_asos w_rn
+                  ON w_rn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_rn.weatherItem = 'rn'
+                LEFT JOIN weather_pattern_asos w_sn
+                  ON w_sn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_sn.weatherItem = 'dsnw'
+                LEFT JOIN weather_pattern_asos w_ws
+                  ON w_ws.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w_ws.weatherItem = 'ws'
+                WHERE pr.road_name = %s
+                  AND HOUR(ps.datetime) = %s
+                  AND ps.speed > 0
                   AND (w_rn.{hour_col} IS NULL OR w_rn.{hour_col} = 0)
                   AND (w_sn.{hour_col} IS NULL OR w_sn.{hour_col} = 0)
                   AND (w_ws.{hour_col} IS NULL OR w_ws.{hour_col} < 5)
+                GROUP BY dow
             """
-            df_weather = pd.read_sql(query_weather, conn, params=(road,))
+            df_weather = pd.read_sql(query_weather, conn, params=(road, hour))
         else:
             item = weather_col_map[weather_type]
             vmin, vmax = intensity_ranges[weather_type][intensity]
             query_weather = f"""
-                SELECT t.statDate, t.{hour_col} AS speed
-                FROM speed_pattern_timezone t
-                JOIN weather_pattern_asos w ON t.statDate = w.statDate AND w.weatherItem = %s
-                WHERE t.roadName = %s AND t.{hour_col} > 0
+                SELECT WEEKDAY(ps.datetime) AS dow, AVG(ps.speed) AS speed
+                FROM pp_speed ps
+                JOIN pp_road pr
+                  ON pr.road_id = ps.road_id
+                JOIN weather_pattern_asos w
+                  ON w.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                 AND w.weatherItem = %s
+                WHERE pr.road_name = %s
+                  AND HOUR(ps.datetime) = %s
+                  AND ps.speed > 0
                   AND w.{hour_col} >= %s AND w.{hour_col} < %s
+                GROUP BY dow
             """
-            df_weather = pd.read_sql(query_weather, conn, params=(item, road, vmin, vmax))
+            df_weather = pd.read_sql(query_weather, conn, params=(item, road, hour, vmin, vmax))
             
         conn.close()
 
-        # 평상시 요일별 통계
-        if not df_base.empty:
-            df_base['statDate'] = pd.to_datetime(df_base['statDate'].astype(str).str.replace('-', ''), format='%Y%m%d', errors='coerce')
-            df_base = df_base.dropna(subset=['statDate'])
-            df_base['dow'] = df_base['statDate'].dt.dayofweek
-            base_grouped = df_base.groupby('dow')['speed'].mean().reset_index().rename(columns={'speed': '평상시(Clear)'})
-        else:
-            base_grouped = pd.DataFrame(columns=['dow', '평상시(Clear)'])
+        base_grouped = df_base.rename(columns={"speed": "평상시(Clear)"})
 
-        # 기상 조건 요일별 통계
-        if not df_weather.empty:
-            df_weather['statDate'] = pd.to_datetime(df_weather['statDate'].astype(str).str.replace('-', ''), format='%Y%m%d', errors='coerce')
-            df_weather = df_weather.dropna(subset=['statDate'])
-            df_weather['dow'] = df_weather['statDate'].dt.dayofweek
-            weather_grouped = df_weather.groupby('dow')['speed'].mean().reset_index().rename(columns={'speed': '기상 조건'})
-        else:
-            weather_grouped = pd.DataFrame(columns=['dow', '기상 조건'])
+        weather_grouped = df_weather.rename(columns={"speed": "기상 조건"})
+
+        if df_base.empty:
+            base_grouped = pd.DataFrame(columns=["dow", "평상시(Clear)"])
+        if df_weather.empty:
+            weather_grouped = pd.DataFrame(columns=["dow", "기상 조건"])
 
         # 월~일(0~6) 틀에 맞추어 데이터 병합
         result = pd.DataFrame({'dow': range(7)})

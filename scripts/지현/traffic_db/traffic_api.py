@@ -30,17 +30,17 @@ async def get_conn():
 # ── 1. 도로명 목록 ──────────────────────────────────────────
 @app.get("/api/roads")
 async def get_roads():
-    """speed_pattern_monthly 테이블에서 고유 도로명 반환"""
+    """pp_road 테이블에서 고유 도로명 반환"""
     conn = await get_conn()
     try:
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute("""
-                SELECT DISTINCT roadname
-                FROM speed_pattern_monthly
-                ORDER BY roadname
+                SELECT DISTINCT road_name
+                FROM pp_road
+                ORDER BY road_name
             """)
             rows = await cur.fetchall()
-            return {"roads": [r["roadname"] for r in rows]}
+            return {"roads": [r["road_name"] for r in rows]}
     finally:
         conn.close()
 
@@ -52,19 +52,22 @@ async def get_base_speed(
     hour: int = Query(..., ge=0, le=23),
     day: str = Query(...),          # mon / tue / wed / thu / fri / sat / sun
 ):
-    """
-    speed_pattern_timezone 테이블에서
-    선택한 도로·시간·요일의 평균 속도를 반환
-    """
+    """pp_speed에서 선택한 도로·시간·요일 평균 속도를 반환"""
     conn = await get_conn()
     try:
         async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute(f"""
-                SELECT AVG(speed_{day}) AS avg_speed
-                FROM speed_pattern_timezone
-                WHERE roadname = %s
-                  AND timezone = %s
-            """, (roadname, hour))
+            await cur.execute(
+                """
+                SELECT AVG(ps.speed) AS avg_speed
+                FROM pp_speed ps
+                JOIN pp_road pr
+                  ON pr.road_id = ps.road_id
+                WHERE pr.road_name = %s
+                  AND HOUR(ps.datetime) = %s
+                  AND WEEKDAY(ps.datetime) = %s
+                """,
+                (roadname, hour, _day_to_dow(day)),
+            )
             row = await cur.fetchone()
             avg = round(float(row["avg_speed"]), 1) if row and row["avg_speed"] else None
             return {"roadname": roadname, "hour": hour, "day": day, "base_speed": avg}
@@ -80,42 +83,73 @@ async def get_weather_speed(
     day: str = Query(...),
     weather: str = Query(...),      # clear / rn_low / rn_mid / rn_high / ws_low / ws_mid / ws_high / snow_low / snow_mid / snow_high
 ):
-    """
-    weather_pattern_asos + speed_pattern_monthly 조합으로
-    기상 조건별 예측 속도 반환
-    """
+    """weather_pattern_asos를 '월 평균 강도'로 보고 pp_speed 평균을 조건부로 집계"""
     conn = await get_conn()
     try:
         async with conn.cursor(aiomysql.DictCursor) as cur:
+            hour_col = f"hour{hour:02d}"
+            dow = _day_to_dow(day)
 
-            # 기상 조건별 필터 매핑
-            weather_filter = {
-                "clear":    "rn = 0 AND dsnw = 0 AND ws < 5",
-                "rn_low":   "rn > 0  AND rn < 5",
-                "rn_mid":   "rn >= 5  AND rn < 20",
-                "rn_high":  "rn >= 20",
-                "ws_low":   "wd IS NOT NULL AND ws >= 3  AND ws < 7",
-                "ws_mid":   "ws >= 7  AND ws < 12",
-                "ws_high":  "ws >= 12",
-                "snow_low": "dsnw > 0 AND dsnw < 1",
-                "snow_mid": "dsnw >= 1 AND dsnw < 5",
-                "snow_high":"dsnw >= 5",
-            }
+            if weather == "clear":
+                await cur.execute(
+                    f"""
+                    SELECT AVG(ps.speed) AS predicted_speed
+                    FROM pp_speed ps
+                    JOIN pp_road pr
+                      ON pr.road_id = ps.road_id
+                    LEFT JOIN weather_pattern_asos w_rn
+                      ON w_rn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                     AND w_rn.weatherItem = 'rn'
+                    LEFT JOIN weather_pattern_asos w_sn
+                      ON w_sn.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                     AND w_sn.weatherItem = 'dsnw'
+                    LEFT JOIN weather_pattern_asos w_ws
+                      ON w_ws.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                     AND w_ws.weatherItem = 'ws'
+                    WHERE pr.road_name = %s
+                      AND HOUR(ps.datetime) = %s
+                      AND WEEKDAY(ps.datetime) = %s
+                      AND (w_rn.{hour_col} IS NULL OR w_rn.{hour_col} = 0)
+                      AND (w_sn.{hour_col} IS NULL OR w_sn.{hour_col} = 0)
+                      AND (w_ws.{hour_col} IS NULL OR w_ws.{hour_col} < 5)
+                    """,
+                    (roadname, hour, dow),
+                )
+            else:
+                # weather_pattern_asos.weatherItem 값 기준으로 조건을 구성
+                # (중요) 기존 traffic_api.py의 wd 사용은 현 스키마(weatherItem=ws만 존재)에 맞지 않아 제거했습니다.
+                weather_rules: dict[str, tuple[str, str, tuple]] = {
+                    "rn_low": ("rn", f"w.{hour_col} > %s AND w.{hour_col} < %s", (0, 5)),
+                    "rn_mid": ("rn", f"w.{hour_col} >= %s AND w.{hour_col} < %s", (5, 20)),
+                    "rn_high": ("rn", f"w.{hour_col} >= %s", (20,)),
+                    "ws_low": ("ws", f"w.{hour_col} >= %s AND w.{hour_col} < %s", (3, 7)),
+                    "ws_mid": ("ws", f"w.{hour_col} >= %s AND w.{hour_col} < %s", (7, 12)),
+                    "ws_high": ("ws", f"w.{hour_col} >= %s", (12,)),
+                    "snow_low": ("dsnw", f"w.{hour_col} > %s AND w.{hour_col} < %s", (0, 1)),
+                    "snow_mid": ("dsnw", f"w.{hour_col} >= %s AND w.{hour_col} < %s", (1, 5)),
+                    "snow_high": ("dsnw", f"w.{hour_col} >= %s", (5,)),
+                }
+                if weather not in weather_rules:
+                    raise ValueError(f"Unknown weather value: {weather}")
 
-            cond = weather_filter.get(weather, "rn = 0 AND dsnw = 0")
+                item, cond_sql, cond_params = weather_rules[weather]
 
-            # weather_pattern_asos 에서 해당 기상 조건의 날짜·시간 목록 추출 후
-            # speed_pattern_monthly 와 조인해 평균 속도 계산
-            await cur.execute(f"""
-                SELECT AVG(spm.avg_speed) AS predicted_speed
-                FROM speed_pattern_monthly spm
-                JOIN weather_pattern_asos wpa
-                  ON DATE(wpa.tm) = DATE(spm.base_date)
-                 AND HOUR(wpa.tm) = %s
-                WHERE spm.roadname = %s
-                  AND DAYNAME(spm.base_date) = %s
-                  AND {cond}
-            """, (hour, roadname, _day_to_mysql(day)))
+                await cur.execute(
+                    f"""
+                    SELECT AVG(ps.speed) AS predicted_speed
+                    FROM pp_speed ps
+                    JOIN pp_road pr
+                      ON pr.road_id = ps.road_id
+                    JOIN weather_pattern_asos w
+                      ON w.statDate = DATE_FORMAT(ps.datetime, '%Y%m')
+                     AND w.weatherItem = %s
+                    WHERE pr.road_name = %s
+                      AND HOUR(ps.datetime) = %s
+                      AND WEEKDAY(ps.datetime) = %s
+                      AND {cond_sql}
+                    """,
+                    (item, roadname, hour, dow, *cond_params),
+                )
 
             row = await cur.fetchone()
             predicted = round(float(row["predicted_speed"]), 1) if row and row["predicted_speed"] else None
@@ -130,9 +164,13 @@ async def get_weather_speed(
         conn.close()
 
 
-def _day_to_mysql(day: str) -> str:
+def _day_to_dow(day: str) -> int:
+    """
+    MySQL WEEKDAY() 기준
+    0=Monday, 1=Tuesday, ..., 6=Sunday
+    """
     mapping = {
-        "mon": "Monday", "tue": "Tuesday", "wed": "Wednesday",
-        "thu": "Thursday", "fri": "Friday", "sat": "Saturday", "sun": "Sunday"
+        "mon": 0, "tue": 1, "wed": 2,
+        "thu": 3, "fri": 4, "sat": 5, "sun": 6,
     }
-    return mapping.get(day, "Monday")
+    return mapping.get(day, 0)
