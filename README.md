@@ -36,7 +36,7 @@
 ## 📐 Database Architecture (ERD)
 
 <p align="center">
-  <img src="erd_image_name.png" width="80%">
+  <img src=""C:\Users\dlqkf\OneDrive\Desktop\SKN\2week\prj0331\erd_final.png"" width="80%">
 </p>
 
 ### **📌 Schema Highlights**
