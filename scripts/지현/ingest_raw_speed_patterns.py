@@ -461,8 +461,8 @@ def main() -> None:
     parser.add_argument("--speed-monthly-sql", default="speed_pattern_monthly.sql", help="scripts/지현/speed_pattern_monthly.sql path")
 
     parser.add_argument("--load-weather", action="store_true", help="weather_pattern_asos also load via ASOS API")
-    parser.add_argument("--weather-start-year", type=int, default=2023)
-    parser.add_argument("--weather-end-year", type=int, default=2026)
+    parser.add_argument("--weather-start-year", type=int, default=2026)
+    parser.add_argument("--weather-end-year", type=int, default=2027)
     args = parser.parse_args()
 
     cfg = DBConfig.from_env()

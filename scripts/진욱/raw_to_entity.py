@@ -30,11 +30,7 @@ cursor = conn.cursor()
 # 공통 유틸
 # -----------------------------
 def build_datetime(stat_date, hour):
-    if isinstance(stat_date, str):
-        base = datetime.strptime(stat_date, "%Y-%m-%d")
-    else:
-        base = stat_date
-    return base + timedelta(hours=hour)
+    return datetime.combine(stat_date, datetime.min.time()) + timedelta(hours=hour)
 
 
 def get_or_create_road_id(cursor, road_name, cache):
@@ -170,7 +166,7 @@ def _insert_speed_batch(cursor, conn, batch):
 # -----------------------------
 # RAW 데이터 조회
 # -----------------------------
-START, END = '2026-01-01', '2026-01-31'
+START, END = '2026-01-01', '2026-03-30'
 
 cursor.execute("""
     SELECT * FROM traffic_raw

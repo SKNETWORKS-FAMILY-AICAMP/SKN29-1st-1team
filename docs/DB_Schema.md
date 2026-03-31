@@ -51,6 +51,22 @@
 - `UNIQUE KEY uk_hazard (link_id, created_at, hazard_grade, hazard_count, hazard_type, hazard_state)`
 - `INDEX idx_pp_hazard_road (road_id)`
 
+### `hazard_type_code`
+> 도로 위험(hazard) 결함 유형 코드 조회용 참조 테이블.
+- `defect_type_id` INT NOT NULL PRIMARY KEY
+- `defect_name` VARCHAR(50) NOT NULL
+- 예시 데이터:
+  - `0` 포트홀
+  - `1` 피로균열
+  - `2` 수직균열
+  - `3` 수평균열
+  - `4` 노면수리불량
+  - `5` 쓰레기
+  - `6` 현수막
+  - `7` 노면표시불량
+  - `8` 시선유도봉불량
+  - `9` 기타
+
 ### `pp_incheon_accidents`
 - `afos_fid` VARCHAR(50) PRIMARY KEY
 - `afos_id` VARCHAR(50)
