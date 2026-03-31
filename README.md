@@ -39,7 +39,9 @@
 ![SKN29_1ST_1TEAM_시연영상](https://github.com/user-attachments/assets/32367bb0-09e1-4716-8c57-72df330117c5)
 
 <br>
-[발표자료.pdf](docs/SKN29기_발표ppt.pdf)
+### 📎 발표자료
+
+* [발표자료 PDF 보기](./docs/SKN29기_발표ppt.pdf)
 
 ---
 
