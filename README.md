@@ -34,23 +34,8 @@
 
 ## 2. Visualization Preview 🖼️
 
-<img width="1920" height="866" alt="스크린샷 2026-03-31 122226" src="https://github.com/user-attachments/assets/db0769a6-8941-44bb-8201-dc8f1bcde15f" />
 
-
-<img width="1543" height="866" alt="스크린샷 2026-03-31 122855" src="https://github.com/user-attachments/assets/37642ae0-0d69-4251-99a0-7d6cfe4d88e2" />
-<img width="1543" height="863" alt="스크린샷 2026-03-31 123024" src="https://github.com/user-attachments/assets/72da5afd-df8f-4000-b48e-e148e3584625" />
-
-
-<img width="1535" height="866" alt="스크린샷 2026-03-31 123331" src="https://github.com/user-attachments/assets/ccad109d-1156-4e2d-8fcd-b1aac7a46642" />
-<img width="1530" height="498" alt="스크린샷 2026-03-31 123426" src="https://github.com/user-attachments/assets/3e2475ad-055a-4664-94ac-e48e37d7a728" />
-
-
-<img width="1531" height="859" alt="스크린샷 2026-03-31 123453" src="https://github.com/user-attachments/assets/33ec9b25-e49d-4cb2-a2ec-e5ab9a2d6657" />
-<img width="1523" height="857" alt="스크린샷 2026-03-31 123535" src="https://github.com/user-attachments/assets/96b47685-8f81-4622-95d1-8fa927d65b34" />
-
-
-<img width="1535" height="863" alt="스크린샷 2026-03-31 123608" src="https://github.com/user-attachments/assets/9a6ee1fd-45e8-4f42-a145-3507b56fd61b" />
-<img width="1530" height="860" alt="스크린샷 2026-03-31 123659" src="https://github.com/user-attachments/assets/63401000-ae2e-4bef-ba28-425d7d19c710" />
+![SKN29_1ST_1TEAM_시연영상](https://github.com/user-attachments/assets/32367bb0-09e1-4716-8c57-72df330117c5)
 
 <br>
 
