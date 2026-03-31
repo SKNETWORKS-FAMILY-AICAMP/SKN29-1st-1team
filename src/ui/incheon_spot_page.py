@@ -14,7 +14,7 @@ from service.incheon_spot_service import (
 def render_incheon_spot_page(start, end, road_name: str) -> None:
     _ = (start, end, road_name)
     st.subheader("인천 사고·화물 다발지")
-    st.caption(
+    st.info(
         "이 자료는 **발생 시각이 없어** 사이드바의 **기간**으로 나누어 보지는 못합니다. "
         "**도로명** 필터도 이 화면에는 적용되지 않습니다."
     )
