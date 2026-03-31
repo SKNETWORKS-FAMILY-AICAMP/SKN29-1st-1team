@@ -161,7 +161,27 @@
 
 <br>
 
-## 9. Reference 📚
+## 9. 실행 가이드
+#### 프로젝트 루트 `./environment.yml`로 conda 환경 생성
+```
+conda env create-f environment.yml
+conda activate skn-1st
+```
+
+#### `.env.sample`참고 `.env`파일 세팅
+#### `src` 경로에서 실행
+```
+cd src
+python -m streamlit run app/main.py
+```
+
+<br>
+
+---
+
+<br>
+
+## 10. Reference 📚
 
 * [인천광역시 공공데이터 포털](https://www.data.go.kr/)
 * [기상청 기상자료개방포털 (ASOS)](https://data.kma.go.kr/)
