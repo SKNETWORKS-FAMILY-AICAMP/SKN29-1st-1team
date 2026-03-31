@@ -166,5 +166,5 @@
 * [인천광역시 공공데이터 포털](https://www.data.go.kr/)
 * [기상청 기상자료개방포털 (ASOS)](https://data.kma.go.kr/)
 * [TAAS 교통사고분석시스템](https://taas.koroad.or.kr/web/shp/mik/main.do?menuId=WEB_KMP)
-* [인천 교통사고 : 네이버 뉴스검색] (https://search.naver.com/search.naver?ssc=tab.news.all&where=news&sm=tab_jum&query=%EC%9D%B8%EC%B2%9C+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0)
+* [인천 교통사고 : 네이버 뉴스검색](https://search.naver.com/search.naver?where=news&query=%EC%9D%B8%EC%B2%9C+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0)
 * **SK Networks Family AI Camp**
